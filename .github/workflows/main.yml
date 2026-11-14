@@ -1,0 +1,28 @@
+name: Build VortexOS ISO
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install archiso
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y archiso squashfs-tools
+
+      - name: Build ISO
+        run: |
+          sudo mkarchiso -v -w /tmp/vortex-work -o ./out .
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VortexOS-ISO
+          path: out/*.iso
+          retention-days: 7
