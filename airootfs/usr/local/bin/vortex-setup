@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# VortexOS installer — installs VortexOS to disk (UEFI/GPT, btrfs)
+set -e
+
+clear
+echo "════════════════════════════════════════════════════════"
+echo "  VortexOS installer — target disk will be ERASED"
+echo "════════════════════════════════════════════════════════"
+lsblk -d -o NAME,SIZE,MODEL | grep -E "sd|nvme|hd"
+read -rp "Enter target disk (e.g. /dev/nvme0n1 or /dev/sda): " DISK
+[[ -b "$DISK" ]] || { echo "Not a block device: $DISK"; exit 1; }
+
+read -rp "Erase $DISK completely and install VortexOS? (yes/no): " CONF
+[[ "$CONF" == "yes" ]] || exit 0
+
+read -rp "Username: " USERNAME
+read -rsp "Password: " PASSWORD; echo
+
+echo "[1/6] Partitioning $DISK..."
+parted -s "$DISK" mklabel gpt
+parted -s "$DISK" mkpart ESP fat32 1MiB 513MiB
+parted -s "$DISK" set 1 esp on
+parted -s "$DISK" mkpart primary 513MiB 100%
+
+if [[ "$DISK" == *nvme* ]]; then
+    ESP="${DISK}p1"; ROOT="${DISK}p2"
+else
+    ESP="${DISK}1"; ROOT="${DISK}2"
+fi
+
+echo "[2/6] Formatting..."
+mkfs.fat -F32 "$ESP"
+mkfs.btrfs -f "$ROOT"
+
+echo "[3/6] Mounting + subvolumes..."
+mount "$ROOT" /mnt
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@snapshots
+umount /mnt
+mount -o subvol=@,compress=zstd,noatime "$ROOT" /mnt
+mkdir -p /mnt/{home,boot/efi,.snapshots}
+mount -o subvol=@home,compress=zstd,noatime "$ROOT" /mnt/home
+mount -o subvol=@snapshots "$ROOT" /mnt/.snapshots
+mount "$ESP" /mnt/boot/efi
+
+echo "[4/6] Installing base system (this takes a while)..."
+pacstrap -K /mnt base linux linux-firmware linux-headers \
+    networkmanager grub efibootmgr btrfs-progs sudo \
+    nvidia nvidia-utils lib32-nvidia-utils nvidia-settings \
+    pipewire pipewire-pulse wireplumber mesa lib32-mesa \
+    vulkan-icd-loader lib32-vulkan-icd-loader \
+    sddm plasma-desktop konsole dolphin kate flatpak discover \
+    firefox steam gamemode lib32-gamemode mangohud lib32-mangohud \
+    wine lutris wine-mono wine-gecko noto-fonts ttf-dejavu
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+echo "[5/6] System configuration..."
+arch-chroot /mnt /bin/bash <<CHROOT
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+echo "vortexos" > /etc/hostname
+sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+
+useradd -m -G wheel -s /bin/bash $USERNAME
+echo "$USERNAME:$PASSWORD" | chpasswd
+echo "root:$PASSWORD" | chpasswd
+echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
+
+systemctl enable NetworkManager sddm fstrim.timer
+
+# NVIDIA kernel params for max FPS
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 mitigations=off nowatchdog /' /etc/default/grub
+
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=VortexOS
+grub-mkconfig -o /boot/grub/grub.cfg
+
+# App store
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+CHROOT
+
+echo "[6/6] Done! Unmounting..."
+umount -R /mnt
+echo
+echo "════════════════════════════════════════════════════════"
+echo "  VortexOS installed! Reboot and remove the USB stick."
+echo "════════════════════════════════════════════════════════"
+read -rp "Reboot now? (yes/no): " REBOOT
+[[ "$REBOOT" == "yes" ]] && reboot

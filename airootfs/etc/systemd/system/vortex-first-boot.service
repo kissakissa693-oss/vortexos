@@ -1,0 +1,12 @@
+[Unit]
+Description=VortexOS first-boot setup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vortex-first-boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

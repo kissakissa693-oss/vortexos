@@ -1,0 +1,33 @@
+name: Build VortexOS ISO
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install archiso on Ubuntu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y archiso squashfs-tools
+
+      - name: Prepare profile symlinks
+        run: |
+          mkdir -p VortexOS/airootfs/etc/systemd/system/multi-user.target.wants
+          ln -sf /etc/systemd/system/vortex-first-boot.service                  VortexOS/airootfs/etc/systemd/system/multi-user.target.wants/vortex-first-boot.service
+
+      - name: Build ISO
+        run: |
+          sudo mkarchiso -v -w /tmp/vortex-work -o ./out ./VortexOS
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VortexOS-ISO
+          path: out/*.iso
+          retention-days: 7

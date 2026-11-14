@@ -1,0 +1,94 @@
+# ── Base system ─────────────────────────────────────────────
+base
+base-devel
+linux
+linux-firmware
+linux-headers
+amd-ucode
+intel-ucode
+grub
+efibootmgr
+networkmanager
+openssh
+sudo
+git
+wget
+curl
+unzip
+tar
+nano
+vim
+htop
+fastfetch
+
+# ── NVIDIA (RTX 4070 Ti — proprietary driver = best FPS) ───
+nvidia
+nvidia-utils
+nvidia-settings
+lib32-nvidia-utils
+
+# ── Vulkan / gaming runtime ─────────────────────────────────
+vulkan-icd-loader
+lib32-vulkan-icd-loader
+lib32-vulkan-radeon
+vulkan-tools
+mesa
+lib32-mesa
+opencl-nvidia
+lib32-opencl-nvidia
+
+# ── Steam, Proton, performance tools ────────────────────────
+steam
+gamemode
+lib32-gamemode
+mangohud
+lib32-mangohud
+lib32-pipewire
+pipewire
+pipewire-alsa
+pipewire-pulse
+wireplumber
+
+# ── KDE Plasma desktop ──────────────────────────────────────
+plasma-desktop
+plasma-meta
+sddm
+sddm-kcm
+konsole
+dolphin
+dolphin-plugins
+ark
+kate
+krunner
+flatpak
+discover
+kdeconnect
+plasma-browser-integration
+power-profiles-daemon
+xdg-desktop-portal-kde
+
+# ── App store / apps ────────────────────────────────────────
+gnome-software  # backup app store frontend
+flatpak-xdg-utils
+
+# ── Browsers (your pick — none are Edge) ───────────────────
+firefox
+firefox-ublock-origin
+chromium
+
+# ── Media & utilities ───────────────────────────────────────
+vlc
+mpv
+gimp
+libreoffice-fresh
+discord
+obs-studio
+wine
+winetricks
+lutris
+
+# ── Fonts ───────────────────────────────────────────────────
+noto-fonts
+noto-fonts-emoji
+ttf-dejavu
+ttf-liberation

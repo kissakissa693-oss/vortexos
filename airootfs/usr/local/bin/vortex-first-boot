@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# VortexOS first-boot: run once on live session startup
+set -e
+
+LOG=/var/log/vortex-first-boot.log
+echo "[vortex] first-boot start $(date)" >> "$LOG"
+
+# ── Enable Flathub app store ────────────────────────────────
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo >> "$LOG" 2>&1 || true
+
+# ── NVIDIA max-performance mode ─────────────────────────────
+nvidia-settings -a "[gpu:0]/GpuPowerMizerMode=1" >> "$LOG" 2>&1 || true
+
+# ── Kernel: enable hugepages + disable watchdog (game perf) ─
+if ! grep -q "mitigations=off" /etc/default/grub 2>/dev/null; then
+    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="mitigations=off nowatchdog /' /etc/default/grub 2>/dev/null || true
+fi
+
+# ── Proton-GE: latest release straight from GitHub ───────
+mkdir -p /home/vortex/.steam/root/compatibilitytools.d
+LATEST=$(curl -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep browser_download_url | grep .tar.gz | cut -d '"' -f 4)
+if [[ -n "$LATEST" ]]; then
+    curl -L -o /tmp/proton-ge.tar.gz "$LATEST"
+    tar -xzf /tmp/proton-ge.tar.gz -C /home/vortex/.steam/root/compatibilitytools.d/
+    rm /tmp/proton-ge.tar.gz
+    echo "[vortex] installed $(basename "$LATEST")" >> "$LOG"
+fi
+flatpak install -y flathub com.heroicgameslauncher.hgl >> "$LOG" 2>&1 || true
+sudo -u vortex mkdir -p /home/vortex/.local/share/Steam/config
+cat > /home/vortex/.steam/steam/config.vdf <<'EOF'
+"InstallConfigStore"
+{
+    "Software"
+    {
+        "Valve"
+        {
+            "Steam"
+            {
+                "CompatToolMapping"
+                {
+                    "0"
+                    {
+                        "name"		"GE-Proton"
+                        "config"	""
+                        "priority"	"75"
+                    }
+                }
+            }
+        }
+    }
+}
+EOF
+chown -R vortex:vortex /home/vortex/.steam /home/vortex/.local || true
+
+echo "[vortex] first-boot done $(date)" >> "$LOG"

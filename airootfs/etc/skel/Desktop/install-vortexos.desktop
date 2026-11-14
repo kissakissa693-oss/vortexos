@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install VortexOS
+Comment=Install VortexOS to your disk
+Exec=konsole -e sudo /usr/local/bin/vortex-setup
+Icon=system-software-install
+Terminal=false
+Categories=System;
