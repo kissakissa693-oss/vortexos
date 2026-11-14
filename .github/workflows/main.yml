@@ -11,14 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install archiso
+      - name: Build ISO in Arch container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y archiso squashfs-tools
-
-      - name: Build ISO
-        run: |
-          sudo mkarchiso -v -w /tmp/vortex-work -o ./out .
+          sudo docker run --privileged --rm \
+            -v "${{ github.workspace }}:/profile" \
+            archlinux:latest \
+            bash -c "pacman -Sy --noconfirm archiso && mkarchiso -v -w /tmp/vortex-work -o /profile/out /profile"
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
